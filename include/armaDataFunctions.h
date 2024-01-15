@@ -2,7 +2,6 @@
 #include "pch.h"
 using JSON = nlohmann::json;
 using String = std::string;
-using String_view = std::string_view;
 using armaCallbackPtr = int(*)(char const*, char const*, char const*);
 namespace fs = std::filesystem;
 

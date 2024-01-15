@@ -44,13 +44,12 @@ int RVExtensionArgs(char* output, int outputSize, const char* function, const ch
 		}
 		try {
 			filePath = arguments.at(0);
-			if (!fs::exists(filePath)) throw std::runtime_error(std::format("{} not found", filePath.string()));
+			if (!fs::exists(filePath)) throw std::runtime_error(filePath.string() + " not found");
 ;		}
 		catch (const std::exception& e) {
 			strncpy_safe(output, e.what(), outputSize);
 			return -1;
 		}
-		
 	}
 	/*DATA FUNCTIONS*/
 	if (strcmp(function, "getData") == 0) {
