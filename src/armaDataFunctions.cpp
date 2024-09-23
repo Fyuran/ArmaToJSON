@@ -3,11 +3,11 @@
 
 namespace arma {
 
-	int getSplitCount(const String& s, const int outputSize) {
-		return (ceil((s.length()) / outputSize)) + 1;
+	size_t getSplitCount(const String& s, const int outputSize) {
+		return ceil((s.length() / outputSize) + 1);
 	}
 
-	std::vector<String> splitBySize(const String& s, const int outputSize) {
+	std::vector<String> splitBySize(const String& s, const int& outputSize) {
 		size_t pieces = getSplitCount(s, outputSize);
 		std::vector<String> vec;
 		vec.reserve(pieces);
@@ -23,28 +23,95 @@ namespace arma {
 	void parseOutput(const JSON& json, String& output) {
 		bool isFirst = true; //need this flag as first() and back() have undefined behaviour on empty objects or arrays
 		for(const auto& [key, val] : json.items()) {
-			if (!isFirst)
+			if (!isFirst) {
 				output += ", ";
-			else
+			}
+			else {
 				isFirst = false;
-			
+			}
 			if (val.is_object()) {
+
 				output +=  "[\"" + key + "\", " + "createHashMapFromArray[";
-				if (!val.empty())
+
+				if (!val.empty()) {
 					parseOutput(val, output);
+				}
 
 				output += "]]";
-			}
-			else
-				if (!val.empty())
+
+			}else if(val.is_array()) {
+
+				if (json.is_object()) {
+					output += "[\"" + key + "\", [";
+				}
+				else {
+					output +=  "[";
+				}
+
+				if (!val.empty()) {
+					parseOutput(val, output);
+				}
+
+				if (json.is_object()) {
+					output += "]]";
+				}
+				else {
+					output +=  "]";
+				}		
+			} else {
+				if (json.is_object()) {
 					output += "[\"" + key + "\", " + val.dump() + "]";
-				else
-					output += "[\"" + key + "\", " + "[]]";
+				}
+				else {
+					output +=  val.dump();
+				}
+			}
 		}
 	}
 
-	String getData(fs::path filePath, const int outputSize, const int index) {
-		String output = getOutput(filePath, outputSize);
+	std::optional<JSON> recursiveSearch(const JSON& json, const String& category) {
+		for(const auto& [key, val] : json.items()) {
+			if(key == category) {
+				return val;
+			}
+			else if(val.is_object() || val.is_array()) {
+				JSON j = recursiveSearch(val, category).value_or(JSON{});
+				if(!j.empty()) return j;		
+			}
+		}
+		return {};
+	}
+	String getOutput(const fs::path& filePath, const int& outputSize, const String& category) {
+		String output = "";
+
+		JSON json;
+		try {
+			std::ifstream jsonFile(filePath);
+			if(jsonFile) {
+				json = JSON::parse(jsonFile);
+			}
+			else {
+				throw std::runtime_error(filePath.string() + " not found");
+			}
+			if(!category.empty()) {
+				JSON data = recursiveSearch(json, category).value_or(JSON{});
+				if(data.empty())
+					return "createHashMap";
+				json = data;
+			}
+			output += "createHashMapFromArray[";
+			parseOutput(json, output);
+			output += "]";
+		}
+		catch (const std::exception& e) {
+			return e.what();
+		}
+
+		return output;
+	}
+
+	String getDataPiece(fs::path filePath, const int outputSize, const int index, const String category) {
+		String output = getOutput(filePath, outputSize, category);
 		auto split = splitBySize(output, outputSize);
 		try {
 			return split.at(index);
@@ -54,30 +121,8 @@ namespace arma {
 		}
 	}
 
-	String getOutput(const fs::path filePath, const int outputSize) {
-		String output = "";
-
-		JSON json;
-		try {
-			std::ifstream jsonFile(filePath);
-			if(jsonFile)
-				json = JSON::parse(jsonFile);
-			else
-				throw std::runtime_error(filePath.string() + " not found");
-		}
-		catch (const std::exception& e) {
-			return e.what();
-		}
-
-		output += "createHashMapFromArray[";
-		parseOutput(json, output);
-		output += "]";
-			
-		return output;
-	}
-
-	String getPieces(const fs::path filePath, const int outputSize) {
-		String output = getOutput(filePath, outputSize);
+	String getPieces(const fs::path filePath, const int outputSize, const String category) {
+		String output = getOutput(filePath, outputSize, category);
 		auto pieces = splitBySize(output, outputSize).size();
 		return std::to_string(pieces);
 	}

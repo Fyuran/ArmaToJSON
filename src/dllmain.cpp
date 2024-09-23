@@ -13,18 +13,13 @@ enum returnTypes{
 };
 int(*callbackPtr)(char const* name, char const* function, char const* data) = nullptr;
 
-int strncpy_safe(char* output, const String src)
-{
-	int i = 0;
-	for (; src[i] != '\0'; i++) {
-		output[i] = src[i];
-	}
-	output[i] = '\0';
-	return i;
+void strncpy_safe(char *output, const String src) {
+	strcpy(output, src.c_str());
 }
 
-bool areEqual(const char* _Str1, const char* _Str2) {
-	return strcmp(_Str1, _Str2) == 0;
+bool areEqual(const char *_Str1, const char *_Str2)
+{
+    return strcmp(_Str1, _Str2) == 0;
 }
 
 //--- Extension version information shown in .rpt file
@@ -63,13 +58,14 @@ int RVExtensionArgs(char* output, int outputSize, const char* function, const ch
 	}
 
 	/*DATA FUNCTIONS*/
-	if (areEqual(function, "callbackData")) {
-		if (arguments.size() != 1) {
-			strncpy_safe(output, "length_error: passed arguments should be two: [filePath].");
+	if (areEqual(function, "getDataPiece")) {
+		if (arguments.size() != 2) {
+			strncpy_safe(output, "length_error: passed arguments should be two: [filePath, index].");
 			return ERROR;
 		}
 		try {
-			auto whocares = std::async(std::launch::async, callbackPtr, "btc_ArmaToJSON", "parseOutput", arma::getOutput(filePath, outputSize).c_str());
+			int index = stoi(arguments.at(1));
+			strncpy_safe(output, arma::getDataPiece(filePath, outputSize, index));
 		}
 		catch (const std::exception& e) {
 			strncpy_safe(output, e.what());
@@ -77,14 +73,30 @@ int RVExtensionArgs(char* output, int outputSize, const char* function, const ch
 		}
 		return OK;
 	}
-	if (areEqual(function, "getData")) {
-		if (arguments.size() != 2) {
-			strncpy_safe(output, "length_error: passed arguments should be two: [filePath, index].");
+	if (areEqual(function, "getDataPieceByCategory")) {
+		if (arguments.size() != 3) {
+			strncpy_safe(output, "length_error: passed arguments should be three: [filePath, index, category].");
 			return ERROR;
 		}
 		try {
 			int index = stoi(arguments.at(1));
-			strncpy_safe(output, arma::getData(filePath, outputSize, index));
+			String category = arguments.at(2);
+			strncpy_safe(output, arma::getDataPiece(filePath, outputSize, index, category));
+		}
+		catch (const std::exception& e) {
+			strncpy_safe(output, e.what());
+			return ERROR;
+		}
+		return OK;
+	}
+	if (areEqual(function, "getPiecesByCategory")) {
+		if (arguments.size() != 2) {
+			strncpy_safe(output, "length_error: passed arguments should be two: [filePath, category].");
+			return ERROR;
+		}
+		try {
+			String category = arguments.at(1);
+			strncpy_safe(output, arma::getPieces(filePath, outputSize, category));
 		}
 		catch (const std::exception& e) {
 			strncpy_safe(output, e.what());
@@ -138,14 +150,14 @@ int RVExtensionArgs(char* output, int outputSize, const char* function, const ch
 		return OK;
 	}
 	/*---------------------*/
-	strncpy_safe(output, "Available Functions: getData, retrieveList, deleteFile, copyFile, renameFile");
+	strncpy_safe(output, "Available Functions: getDataPiece, retrieveList, deleteFile, copyFile, renameFile");
 	return ERROR;
 }
 
 //"btc_ArmaToJSON" callExtension "btc_hm_Altis {}"
 //"btc_ArmaToJSON" callExtension ["dataExists", ["D:\SteamLibrary\steamapps\common\Arma 3\btc_hm_Altis (20-20 2023-11-18).JSON"]]
-//"btc_ArmaToJSON" callExtension ["getData", ["D:\SteamLibrary\steamapps\common\Arma 3\btc_hm_Altis (14-43 2024-01-04).JSON", "cities", "-1"]]
-//"btc_ArmaToJSON" callExtension ["getData", ["D:\SteamLibrary\steamapps\common\Arma 3\btc_hm_Altis (14-43 2024-01-04).JSON", "Altis", "-1"]]
+//"btc_ArmaToJSON" callExtension ["getDataPiece", ["D:\SteamLibrary\steamapps\common\Arma 3\btc_hm_Altis (14-43 2024-01-04).JSON", "cities", "-1"]]
+//"btc_ArmaToJSON" callExtension ["getDataPiece", ["D:\SteamLibrary\steamapps\common\Arma 3\btc_hm_Altis (14-43 2024-01-04).JSON", "Altis", "-1"]]
 //"btc_ArmaToJSON" callExtension ["retrieveList", []]
 //"btc_ArmaToJSON" callExtension ["deleteFile", ["D:\SteamLibrary\steamapps\common\Arma 3\btc_hm_Altis (20-20 2023-11-18).JSON"]]
 //"btc_ArmaToJSON" callExtension ["copyFile", ["D:\SteamLibrary\steamapps\common\Arma 3\btc_hm_Altis (20-20 2023-11-18).JSON"]]

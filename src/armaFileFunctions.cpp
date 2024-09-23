@@ -38,10 +38,12 @@ namespace arma {
 		}
 	
 		String out{ fs::absolute(filePath).string() };
-		if (hasCopied)
+		if (hasCopied) {
 			out += "<br/>A copy has been made: " + backupFilePath.filename().string() + "<br/>"; // <br/> will be used by Arma formatText
-		else
+		}
+		else {
 			out += "<br/>No copy could be made.<br/>";
+		}
 
 		return out;
 	}
@@ -56,7 +58,9 @@ namespace arma {
 			ss << function; //btc_hm_${worldName} ${JSON}
 			ss >> fileNameFull >> json;
 
-			if (fileNameFull.empty()) throw std::invalid_argument("invalid file name");
+			if (fileNameFull.empty()) {
+				throw std::invalid_argument("invalid file name");
+			}
 
 			fileNameFull += " (" + getCurrentDateTime() + ").JSON" ;
 		}
@@ -69,8 +73,9 @@ namespace arma {
 		std::filesystem::path filePath{ fs::current_path() / "JSON" / fileNameFull};
 
 		std::thread thread1([&]() {
-			if (!fs::exists(filePath.parent_path()))
+			if (!fs::exists(filePath.parent_path())) {
 				fs::create_directories(filePath.parent_path());
+			}
 			std::ofstream jsonFile{ filePath };
 			if (jsonFile) {
 				jsonFile << std::setw(4) << json;
@@ -83,23 +88,28 @@ namespace arma {
 
 		bool hasWrittenToFile{ f.get() };
 
-		if (hasWrittenToFile) return filePath.string();
-		else return "";
+		if (hasWrittenToFile) {
+			return filePath.string();
+		}
+		else {
+			return "";
+		}
 	}
 
-	const String retrieveList()
-	{
+	const String retrieveList() {
 		const std::filesystem::path filePath{ fs::current_path() / "JSON" };
-		if(!fs::exists(filePath))
+		if(!fs::exists(filePath)) {
 			fs::create_directories(filePath);
+		}
 		const fs::directory_iterator dir{ filePath };
 		std::vector<String> vecDirs;
 
 		try {
 			for (const auto& p : dir) {
 				const String ext{ p.path().extension().string() };
-				if (ext == ".JSON")
+				if (ext == ".JSON") {
 					vecDirs.push_back(fs::absolute(p.path()).string());
+				}
 			}
 		}
 		catch (const std::exception& e) {

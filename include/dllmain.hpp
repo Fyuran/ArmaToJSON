@@ -2,7 +2,7 @@
 #include <string>
 using String = std::string;
 
-	int strncpy_safe(char* output, const String src);
+	void strncpy_safe(char* output, const String src);
 	bool areEqual(const char* _Str1, const char* _Str2);
 
 extern "C" {
