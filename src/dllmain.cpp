@@ -150,7 +150,7 @@ int RVExtensionArgs(char* output, int outputSize, const char* function, const ch
 		return OK;
 	}
 	/*---------------------*/
-	strncpy_safe(output, "Available Functions: getDataPiece, retrieveList, deleteFile, copyFile, renameFile");
+	strncpy_safe(output, "Available Functions: getDataPiece, getDataPieceByCategory, getPiecesByCategory, getPieces, dataExists, copyFile, deleteFile, renameFile, retrieveList");
 	return ERROR;
 }
 
