@@ -81,7 +81,7 @@ namespace arma {
 		}
 		return {};
 	}
-	String getOutput(const fs::path& filePath, const int& outputSize, const String& category) {
+	String getOutputString(const fs::path& filePath, const int& outputSize, const String& category) {
 		String output = "";
 
 		JSON json;
@@ -110,8 +110,22 @@ namespace arma {
 		return output;
 	}
 
+	String getOutputJSONString(const fs::path& filePath, const int& outputSize) {
+		std::ifstream jsonFile(filePath);
+		JSON json;
+
+		if(jsonFile) {
+			json = JSON::parse(jsonFile);
+		}
+		else {
+			throw std::runtime_error(filePath.string() + " not found");
+		}
+		
+		return json.dump();
+	}
+
 	String getDataPiece(fs::path filePath, const int outputSize, const int index, const String category) {
-		String output = getOutput(filePath, outputSize, category);
+		String output = getOutputJSONString(filePath, outputSize);
 		auto split = splitBySize(output, outputSize);
 		try {
 			return split.at(index);
@@ -122,7 +136,7 @@ namespace arma {
 	}
 
 	String getPieces(const fs::path filePath, const int outputSize, const String category) {
-		String output = getOutput(filePath, outputSize, category);
+		String output = getOutputJSONString(filePath, outputSize);
 		auto pieces = splitBySize(output, outputSize).size();
 		return std::to_string(pieces);
 	}

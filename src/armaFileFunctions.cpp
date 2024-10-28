@@ -63,16 +63,8 @@ namespace arma {
 			}
 
 			fileNameFull += " (" + getCurrentDateTime() + ").JSON" ;
-		}
-		catch (const std::exception& e) {
-			return e.what();
-		}
 
-		std::promise<bool> p;
-		std::future<bool> f{ p.get_future() };
-		std::filesystem::path filePath{ fs::current_path() / "JSON" / fileNameFull};
-
-		std::thread thread1([&]() {
+			std::filesystem::path filePath{ fs::current_path() / "JSON" / fileNameFull};
 			if (!fs::exists(filePath.parent_path())) {
 				fs::create_directories(filePath.parent_path());
 			}
@@ -80,20 +72,14 @@ namespace arma {
 			if (jsonFile) {
 				jsonFile << std::setw(4) << json;
 				jsonFile.close();
-
-				p.set_value_at_thread_exit(!(jsonFile.is_open()));
 			}
-			});
-		thread1.detach();
 
-		bool hasWrittenToFile{ f.get() };
-
-		if (hasWrittenToFile) {
 			return filePath.string();
 		}
-		else {
-			return "";
+		catch (const std::exception& e) {
+			return e.what();
 		}
+
 	}
 
 	const String retrieveList() {
