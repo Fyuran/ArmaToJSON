@@ -1,0 +1,61 @@
+{
+	"version": 10,
+	"configurePresets": [
+		{
+			"name": "ninja-multi-vcpkg-windows",
+			"displayName": "Ninja Multi-Config Windows(Dynamic)",
+			"description": "Configure with vcpkg toolchain and generate Ninja project files for all configurations",
+			"binaryDir": "${sourceDir}/build/${presetName}",
+			"installDir": "${sourceDir}/install/${presetName}",
+			"generator": "Ninja Multi-Config",
+			"toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+			"cacheVariables": {
+				"CMAKE_CXX_COMPILER": "cl.exe",
+				"PRESET_NAME": "${presetName}"
+			},
+			"architecture": {
+				"value": "x64"
+			},
+			"toolset": {
+				"value": "host=x64"
+			},
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Windows"
+			}
+		},
+		{
+			"name": "ninja-multi-vcpkg-windows-static",
+			"displayName": "Ninja Multi-Config Windows(Static)",
+			"inherits": "ninja-multi-vcpkg-windows",
+			"cacheVariables": {
+				"VCPKG_TARGET_TRIPLET": "x64-windows-static",
+				"BUILD_STATIC": true
+			}
+		}
+	],
+	"buildPresets": [
+		{
+			"name": "ninja-vcpkg-windows-debug",
+			"configurePreset": "ninja-multi-vcpkg-windows",
+			"displayName": "Build Windows (Debug)",
+			"description": "Build with Ninja/vcpkg (Debug)",
+			"configuration": "Debug"
+		},
+		{
+			"name": "ninja-vcpkg-windows-release",
+			"configurePreset": "ninja-multi-vcpkg-windows",
+			"displayName": "Build Windows (Release)",
+			"description": "Build with Ninja/vcpkg (Release)",
+			"configuration": "Release"
+		},
+		{
+			"name": "ninja-vcpkg-windows-releasedebinfo",
+			"configurePreset": "ninja-multi-vcpkg-windows",
+			"displayName": "Build Windows (RelWithDebInfo)",
+			"description": "Build with Ninja/vcpkg (RelWithDebInfo)",
+			"configuration": "RelWithDebInfo"
+		}
+	]
+}

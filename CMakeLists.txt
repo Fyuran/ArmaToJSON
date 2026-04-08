@@ -1,62 +1,119 @@
-﻿cmake_minimum_required (VERSION 3.8)
-cmake_policy(SET CMP0076 NEW)
-cmake_policy(SET CMP0135 NEW)
-
-project ("btc_ArmaToJSON_x64"
-           LANGUAGES CXX
+﻿cmake_minimum_required(VERSION 4.2)
+project (ArmaToJSON
+        LANGUAGES CXX
 )
 
-add_library (btc_ArmaToJSON_x64 SHARED)
+include(CMakePrintHelpers)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-target_sources (btc_ArmaToJSON_x64 PRIVATE 
-    "src/armaFileFunctions.cpp"
-    "src/dllmain.cpp"
-    "src/dllmain.def"
-    "src/armaDataFunctions.cpp"
-    "include/armaDataFunctions.hpp"
-    "include/armaFileFunctions.hpp"
-    "include/dllmain.hpp"
-  )
-target_include_directories(btc_ArmaToJSON_x64 PRIVATE
-    "include"
+add_subdirectory("test")
+
+add_library (ArmaToJSON SHARED)
+target_sources (ArmaToJSON PRIVATE 
+	"include/dllmain.hpp"
+	"src/dllmain.cpp"
+	"include/packet.hpp"
+	"src/packet.cpp"
+	"include/manager.hpp"
+	"src/manager.cpp"
+	"include/functions.hpp"
+	"src/functions.cpp"
+	"include/logger.hpp"
+	"src/logger.cpp"
 )
 
-target_compile_features(btc_ArmaToJSON_x64 PRIVATE cxx_std_17)
+set_target_properties(ArmaToJSON PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+if(BUILD_STATIC)
+	if(MINGW)
+		#[[
+		--start-group archives --end-group
+		The archives should be a list of archive files. They may be either explicit file names, or -l options.
+		The specified archives are searched repeatedly until no new undefined references are created. 
+		#]]
+		target_link_options(ArmaToJSON PUBLIC -Wl,-allow-multiple-definition -static -static-libgcc -static-libstdc++)
+		target_link_libraries(ArmaToJSON PRIVATE ws2_32) #needed for BOOST Asio
 
-if(MSVC)
-    target_compile_options(btc_ArmaToJSON_x64 PRIVATE
-        $<$<CONFIG:>:/MT>
-        $<$<CONFIG:Debug>:/MTd>
-        $<$<CONFIG:Release>:/MT>
-    )
-    target_compile_definitions(btc_ArmaToJSON_x64 PRIVATE _CRT_SECURE_NO_WARNINGS)
+	else()
+		target_link_options(ArmaToJSON PUBLIC -static-libgcc -static-libstdc++)
+	endif()
 endif()
 
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_STATIC_RUNTIME ON)
+if(CMAKE_CROSSCOMPILING)
+	# where is the target environment
+	list (APPEND CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32)
 
-if(WIN32)
-    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS OFF)
-    set(BOOST_ROOT "c:/boost_1_85_0")
-    set(BOOST_LIBRARYDIR "${BOOST_ROOT}/stage/lib")
+	set(CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES usr/x86_64-w64-mingw32/include)
+	set(CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES usr/x86_64-w64-mingw32/include)
+
+	# search for programs in the build host directories
+	set (CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+	# for libraries and headers in the target directories
+	set (CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+	set (CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+	set (CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+
+	# Make sure Qt can be detected by CMake
+	set (QT_BINARY_DIR /usr/x86_64-w64-mingw32/bin /usr/bin)
+	set (QT_INCLUDE_DIRS_NO_SYSTEM ON)
+	set (QT_HOST_PATH "/usr" CACHE PATH "host path for Qt")
+
+	# set the resource compiler (RHBZ #652435)
+	set (CMAKE_RC_COMPILER x86_64-w64-mingw32-windres)
+	set (CMAKE_MC_COMPILER x86_64-w64-mingw32-windmc)
+
+	# override boost thread component suffix as mingw-w64-boost is compiled with threadapi=win32
+	set (Boost_THREADAPI win32)
+
+	# These are needed for compiling lapack (RHBZ #753906)
+	set (CMAKE_Fortran_COMPILER x86_64-w64-mingw32-gfortran)
+	set (CMAKE_AR:FILEPATH x86_64-w64-mingw32-ar)
+	set (CMAKE_RANLIB:FILEPATH x86_64-w64-mingw32-ranlib)
 endif()
 
-if(UNIX AND NOT APPLE)
-    target_link_options(btc_ArmaToJSON_x64 PRIVATE -static-libgcc -static-libstdc++)
-endif()
+target_include_directories(ArmaToJSON PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/> $<INSTALL_INTERFACE:include/>)
 
-include(FetchContent)
-FetchContent_Declare(json 
-    GIT_REPOSITORY "https://github.com/nlohmann/json.git"
+target_compile_features(ArmaToJSON PUBLIC cxx_std_20)
+
+find_package(Boost REQUIRED COMPONENTS date_time)
+target_link_libraries(ArmaToJSON PUBLIC Boost::date_time)
+
+find_package(Boost REQUIRED COMPONENTS asio)
+target_link_libraries(ArmaToJSON PRIVATE Boost::asio)
+
+find_package(nlohmann_json CONFIG REQUIRED)
+target_link_libraries(ArmaToJSON PUBLIC nlohmann_json::nlohmann_json)
+
+find_package(fmt CONFIG REQUIRED)
+target_link_libraries(ArmaToJSON PUBLIC fmt::fmt)
+
+find_package(spdlog CONFIG REQUIRED)
+target_link_libraries(ArmaToJSON PUBLIC spdlog::spdlog)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}$<IF:$<EQUAL:${CMAKE_SIZEOF_VOID_P},8>,_x64,>" PREFIX "btc_")
+
+cmake_print_properties(
+  TARGETS ArmaToJSON
+  PROPERTIES INCLUDE_DIRECTORIES OUTPUT_NAME
 )
-FetchContent_MakeAvailable(json)
 
-find_package(Boost 1.85 COMPONENTS date_time REQUIRED)
-target_link_libraries(btc_ArmaToJSON_x64 PRIVATE nlohmann_json::nlohmann_json Boost::date_time)
+cmake_print_variables(
+	CMAKE_CROSSCOMPILING 
+	CMAKE_HOST_SYSTEM_NAME 
+	CMAKE_SYSTEM_NAME
+	BUILD_STATIC
+)
 
-if(WIN32) 
-    install(TARGETS btc_ArmaToJSON_x64 DESTINATION "D:/SteamLibrary/steamapps/common/Arma 3")
-endif()
-if(UNIX)
-    install(TARGETS btc_ArmaToJSON_x64 DESTINATION "~/.local/share/Steam/steamapps/common/Arma 3 Server")
+add_custom_command(
+    TARGET ArmaToJSON
+    POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:ArmaToJSON> "${PROJECT_SOURCE_DIR}/build/${PRESET_NAME}/test/$<CONFIG>/"
+    COMMENT "Moving lib to Test Folder"
+)
+
+if(MINGW)
+add_custom_command(
+	TARGET ArmaToJSON
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:ArmaToJSON> $ENV{ARMA3}
+    COMMENT "Moving lib to Arma 3 folder")
 endif()

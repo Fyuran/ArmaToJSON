@@ -1,164 +1,41 @@
 #include "dllmain.hpp"
-#include <string.h>
-#include "armaFileFunctions.hpp"
-#include "armaDataFunctions.hpp"
-#include <future>
+#include "logger.hpp"
+#include "manager.hpp"
+#include "packet.hpp"
 
-namespace fs = std::filesystem;
+#if defined(_MSC_VER) && !defined(__GNUC__)
+// Pure MSVC
+#pragma section(".CRT$XCU", read)
+#pragma section(".CRT$XPU", read)
 
-constexpr auto CURRENT_VERSION = "1.0.0.0";
-enum returnTypes{
-	ERROR = -1,
-	OK
-};
-int(*callbackPtr)(char const* name, char const* function, char const* data) = nullptr;
+#define CONSTRUCTOR(f)                                                                             \
+	static void f();                                                                               \
+	__declspec(allocate(".CRT$XCU")) void (*f##_ptr)() = f;                                        \
+	static void f()
 
-void strncpy_safe(char *output, const String src) {
-	strcpy(output, src.c_str());
+#define DESTRUCTOR(f)                                                                              \
+	static void f();                                                                               \
+	__declspec(allocate(".CRT$XPU")) void (*f##_ptr)() = f;                                        \
+	static void f()
+
+#elif defined(__GNUC__)
+// GCC or MinGW
+#define CONSTRUCTOR(f) static void __attribute__((constructor)) f()
+
+#define DESTRUCTOR(f) static void __attribute__((destructor)) f()
+
+#else
+#error "Unsupported compiler"
+#endif
+
+/* CONSTRUCTOR(init) {
+	LOG_INFO("Initializing ArmaToJSON_x64");
 }
+DESTRUCTOR(end) {
+	LOG_INFO("Deconstructing ArmaToJSON_x64");
+} */
 
-bool areEqual(const char *_Str1, const char *_Str2)
-{
-    return strcmp(_Str1, _Str2) == 0;
+void RVExtension(char *const output, const size_t outputMaxSize, const char *const data) {
+	LOG_INFO("RVExtension called with {} out of {} bytes of data", std::string_view{data}.size(), outputMaxSize);
+	ArmaToJSON::packet_manager::managePacketIO(output, outputMaxSize - 1, std::string_view{data});
 }
-
-//--- Extension version information shown in .rpt file
-void RVExtensionVersion(char* output, int outputSize) {
-	//--- max outputSize is 32 bytes
-	strncpy_safe(output, CURRENT_VERSION);
-}
-
-void RVExtension(char* output, int outputSize, const char* function) {
-	strncpy_safe(output, arma::writeFile(function));
-}
-
-void RVExtensionRegisterCallback(int(*callbackProc)(char const*, char const*, char const*)) {
-	callbackPtr = callbackProc;
-}
-//"extension" callExtension["function", ["arguments"...]]
-int RVExtensionArgs(char* output, int outputSize, const char* function, const char** args, int argsCnt) {
-	outputSize -= 240; //add some padding
-	fs::path filePath;
-	std::vector<String> arguments;
-	if (argsCnt > 0) {
-		for (int i = 0; i < argsCnt; ++i) {
-			String s{ args[i] };
-			s.erase(0, 1);
-			s.erase(s.size() - 1); //unescaped quotes are present when converting
-			arguments.push_back(s);
-		}
-		try {
-			filePath = arguments.at(0);
-			if (!fs::exists(filePath)) throw std::runtime_error(filePath.string() + " not found");
-;		}
-		catch (const std::exception& e) {
-			strncpy_safe(output, e.what());
-			return ERROR;
-		}
-	}
-
-	/*DATA FUNCTIONS*/
-	if (areEqual(function, "getDataPiece")) {
-		if (arguments.size() != 2) {
-			strncpy_safe(output, "length_error: passed arguments should be two: [filePath, index].");
-			return ERROR;
-		}
-		try {
-			int index = stoi(arguments.at(1));
-			strncpy_safe(output, arma::getDataPiece(filePath, outputSize, index));
-		}
-		catch (const std::exception& e) {
-			strncpy_safe(output, e.what());
-			return ERROR;
-		}
-		return OK;
-	}
-	if (areEqual(function, "getDataPieceByCategory")) {
-		if (arguments.size() != 3) {
-			strncpy_safe(output, "length_error: passed arguments should be three: [filePath, index, category].");
-			return ERROR;
-		}
-		try {
-			int index = stoi(arguments.at(1));
-			String category = arguments.at(2);
-			strncpy_safe(output, arma::getDataPiece(filePath, outputSize, index, category));
-		}
-		catch (const std::exception& e) {
-			strncpy_safe(output, e.what());
-			return ERROR;
-		}
-		return OK;
-	}
-	if (areEqual(function, "getPiecesByCategory")) {
-		if (arguments.size() != 2) {
-			strncpy_safe(output, "length_error: passed arguments should be two: [filePath, category].");
-			return ERROR;
-		}
-		try {
-			String category = arguments.at(1);
-			strncpy_safe(output, arma::getPieces(filePath, outputSize, category));
-		}
-		catch (const std::exception& e) {
-			strncpy_safe(output, e.what());
-			return ERROR;
-		}
-		return OK;
-	}
-	if (areEqual(function, "getPieces")) {
-		if (arguments.size() != 1) {
-			strncpy_safe(output, "length_error: passed arguments should be one: [filePath].");
-			return ERROR;
-		}
-		try {
-			strncpy_safe(output, arma::getPieces(filePath, outputSize));
-		}
-		catch (const std::exception& e) {
-			strncpy_safe(output, e.what());
-			return ERROR;
-		}
-		return OK;
-	}
-	/*FILESYSTEM FUNCTIONS*/
-	if (areEqual(function, "dataExists"))
-		if (fs::exists(filePath)) return OK;
-
-	if (areEqual(function, "copyFile")) {
-		strncpy_safe(output, arma::copyFile(filePath));
-		return OK;
-	}
-	if (areEqual(function, "deleteFile")) {
-		strncpy_safe(output, arma::deleteFile(filePath));
-		return OK;
-	}
-	if (areEqual(function, "renameFile")) {
-		if (arguments.size() != 2) {
-			strncpy_safe(output, "length_error: passed arguments should be two: [filePath, name].");
-			return ERROR;
-		}
-		try {
-			String name{ arguments.at(1) };
-			strncpy_safe(output, arma::renameFile(filePath, name));
-		}
-		catch (const std::exception& e) {
-			strncpy_safe(output, e.what());
-			return ERROR;
-		}
-		return OK;
-	}
-	if (areEqual(function, "retrieveList")) {
-		strncpy_safe(output, arma::retrieveList());
-		return OK;
-	}
-	/*---------------------*/
-	strncpy_safe(output, "Available Functions: getDataPiece, getDataPieceByCategory, getPiecesByCategory, getPieces, dataExists, copyFile, deleteFile, renameFile, retrieveList");
-	return ERROR;
-}
-
-//"btc_ArmaToJSON" callExtension "btc_hm_Altis {}"
-//"btc_ArmaToJSON" callExtension ["dataExists", ["D:\SteamLibrary\steamapps\common\Arma 3\btc_hm_Altis (20-20 2023-11-18).JSON"]]
-//"btc_ArmaToJSON" callExtension ["getDataPiece", ["D:\SteamLibrary\steamapps\common\Arma 3\btc_hm_Altis (14-43 2024-01-04).JSON", "cities", "-1"]]
-//"btc_ArmaToJSON" callExtension ["getDataPiece", ["D:\SteamLibrary\steamapps\common\Arma 3\btc_hm_Altis (14-43 2024-01-04).JSON", "Altis", "-1"]]
-//"btc_ArmaToJSON" callExtension ["retrieveList", []]
-//"btc_ArmaToJSON" callExtension ["deleteFile", ["D:\SteamLibrary\steamapps\common\Arma 3\btc_hm_Altis (20-20 2023-11-18).JSON"]]
-//"btc_ArmaToJSON" callExtension ["copyFile", ["D:\SteamLibrary\steamapps\common\Arma 3\btc_hm_Altis (20-20 2023-11-18).JSON"]]
-//"btc_ArmaToJSON" callExtension ["renameFile", ["D:\SteamLibrary\steamapps\common\Arma 3\btc_hm_Altis (20-20 2023-11-18).JSON", "Test"]]

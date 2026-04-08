@@ -1,0 +1,66 @@
+{
+	"version": 10,
+	"configurePresets": [
+		{
+			"name": "ninja-multi-vcpkg-cross",
+			"displayName": "Ninja Multi-Config Cross Compile Windows(Dynamic)",
+			"description": "Configure with vcpkg toolchain and generate Ninja project files for all configurations",
+			"binaryDir": "${sourceDir}/build/${presetName}",
+			"installDir": "${sourceDir}/install/${presetName}",
+			"generator": "Ninja Multi-Config",
+			"toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+			"architecture": {
+				"value": "x64"
+			},
+			"toolset": {
+				"value": "host=x64"
+			},
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Linux"
+			},
+			"cacheVariables": {
+				"CMAKE_SYSTEM_NAME": "Windows",
+				"CMAKE_C_COMPILER": "/usr/bin/x86_64-w64-mingw32-gcc",
+				"CMAKE_CXX_COMPILER": "/usr/bin/x86_64-w64-mingw32-g++",
+				"BUILD_STATIC": false,
+				"VCPKG_TARGET_TRIPLET": "x64-mingw-dynamic",
+				"VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/vcpkg/scripts/toolchains/mingw.cmake",
+				"PRESET_NAME": "${presetName}"
+			}
+		},
+		{
+			"name": "ninja-multi-vcpkg-cross-static",
+			"displayName": "Ninja Multi-Config Cross Compile Windows(Static)",
+			"inherits": "ninja-multi-vcpkg-cross",
+			"cacheVariables": {
+				"VCPKG_TARGET_TRIPLET": "x64-mingw-static",
+				"BUILD_STATIC": true
+			}
+		}
+	],
+	"buildPresets": [
+		{
+			"name": "ninja-vcpkg-cross-debug",
+			"configurePreset": "ninja-multi-vcpkg-cross-static",
+			"displayName": "Build MingGW (Debug)",
+			"description": "Build with Ninja/vcpkg (Debug)",
+			"configuration": "Debug"
+		},
+		{
+			"name": "ninja-vcpkg-cross-release",
+			"configurePreset": "ninja-multi-vcpkg-cross-static",
+			"displayName": "Build MingGW (Release)",
+			"description": "Build with Ninja/vcpkg (Release)",
+			"configuration": "Release"
+		},
+		{
+			"name": "ninja-vcpkg-cross-releasedebinfo",
+			"configurePreset": "ninja-multi-vcpkg-cross-static",
+			"displayName": "Build MingGW (RelWithDebInfo)",
+			"description": "Build with Ninja/vcpkg (RelWithDebInfo)",
+			"configuration": "RelWithDebInfo"
+		}
+	]
+}
