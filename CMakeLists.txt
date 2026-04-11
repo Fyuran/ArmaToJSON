@@ -106,7 +106,7 @@ add_custom_command(
     COMMENT "Moving lib to Arma 3 folder")
 endif()
 
-if(DEFINED ENV{btc_toolchain} AND NOT "$ENV{btc_toolchain}" STREQUAL "")
+if(DEFINED ENV{btc_toolchain} AND NOT "$ENV{btc_toolchain}" STREQUAL "" AND $<$<CONFIG:Release>:TRUE,FALSE>)
 add_custom_command(
 	TARGET ArmaToJSON
     POST_BUILD
