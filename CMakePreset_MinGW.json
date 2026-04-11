@@ -42,21 +42,42 @@
 	],
 	"buildPresets": [
 		{
-			"name": "ninja-vcpkg-cross-debug",
+			"name": "ninja-vcpkg-cross-debug-dynamic",
+			"configurePreset": "ninja-multi-vcpkg-cross",
+			"displayName": "Build MingGW (Debug)",
+			"description": "Build with Ninja/vcpkg (Debug)",
+			"configuration": "Debug"
+		},
+		{
+			"name": "ninja-vcpkg-cross-release-dynamic",
+			"configurePreset": "ninja-multi-vcpkg-cross",
+			"displayName": "Build MingGW (Release)",
+			"description": "Build with Ninja/vcpkg (Release)",
+			"configuration": "Release"
+		},
+		{
+			"name": "ninja-vcpkg-cross-releasedebinfo-dynamic",
+			"configurePreset": "ninja-multi-vcpkg-cross",
+			"displayName": "Build MingGW (RelWithDebInfo)",
+			"description": "Build with Ninja/vcpkg (RelWithDebInfo)",
+			"configuration": "RelWithDebInfo"
+		},
+		{
+			"name": "ninja-vcpkg-cross-debug-static",
 			"configurePreset": "ninja-multi-vcpkg-cross-static",
 			"displayName": "Build MingGW (Debug)",
 			"description": "Build with Ninja/vcpkg (Debug)",
 			"configuration": "Debug"
 		},
 		{
-			"name": "ninja-vcpkg-cross-release",
+			"name": "ninja-vcpkg-cross-release-static",
 			"configurePreset": "ninja-multi-vcpkg-cross-static",
 			"displayName": "Build MingGW (Release)",
 			"description": "Build with Ninja/vcpkg (Release)",
 			"configuration": "Release"
 		},
 		{
-			"name": "ninja-vcpkg-cross-releasedebinfo",
+			"name": "ninja-vcpkg-cross-releasedebinfo-static",
 			"configurePreset": "ninja-multi-vcpkg-cross-static",
 			"displayName": "Build MingGW (RelWithDebInfo)",
 			"description": "Build with Ninja/vcpkg (RelWithDebInfo)",

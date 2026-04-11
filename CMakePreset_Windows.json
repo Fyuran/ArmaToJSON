@@ -37,22 +37,43 @@
 	],
 	"buildPresets": [
 		{
-			"name": "ninja-vcpkg-windows-debug",
+			"name": "ninja-vcpkg-windows-debug-dynamic",
 			"configurePreset": "ninja-multi-vcpkg-windows",
 			"displayName": "Build Windows (Debug)",
 			"description": "Build with Ninja/vcpkg (Debug)",
 			"configuration": "Debug"
 		},
 		{
-			"name": "ninja-vcpkg-windows-release",
+			"name": "ninja-vcpkg-windows-release-dynamic",
 			"configurePreset": "ninja-multi-vcpkg-windows",
 			"displayName": "Build Windows (Release)",
 			"description": "Build with Ninja/vcpkg (Release)",
 			"configuration": "Release"
 		},
 		{
-			"name": "ninja-vcpkg-windows-releasedebinfo",
+			"name": "ninja-vcpkg-windows-releasedebinfo-dynamic",
 			"configurePreset": "ninja-multi-vcpkg-windows",
+			"displayName": "Build Windows (RelWithDebInfo)",
+			"description": "Build with Ninja/vcpkg (RelWithDebInfo)",
+			"configuration": "RelWithDebInfo"
+		},
+				{
+			"name": "ninja-vcpkg-windows-debug-static",
+			"configurePreset": "ninja-multi-vcpkg-windows-static",
+			"displayName": "Build Windows (Debug)",
+			"description": "Build with Ninja/vcpkg (Debug)",
+			"configuration": "Debug"
+		},
+		{
+			"name": "ninja-vcpkg-windows-release-static",
+			"configurePreset": "ninja-multi-vcpkg-windows-static",
+			"displayName": "Build Windows (Release)",
+			"description": "Build with Ninja/vcpkg (Release)",
+			"configuration": "Release"
+		},
+		{
+			"name": "ninja-vcpkg-windows-releasedebinfo-static",
+			"configurePreset": "ninja-multi-vcpkg-windows-static",
 			"displayName": "Build Windows (RelWithDebInfo)",
 			"description": "Build with Ninja/vcpkg (RelWithDebInfo)",
 			"configuration": "RelWithDebInfo"

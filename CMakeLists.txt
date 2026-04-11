@@ -23,14 +23,7 @@ target_sources (ArmaToJSON PRIVATE
 set_target_properties(ArmaToJSON PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 if(BUILD_STATIC)
 	if(MINGW)
-		#[[
-		--start-group archives --end-group
-		The archives should be a list of archive files. They may be either explicit file names, or -l options.
-		The specified archives are searched repeatedly until no new undefined references are created. 
-		#]]
-		target_link_options(ArmaToJSON PUBLIC -Wl,-allow-multiple-definition -static -static-libgcc -static-libstdc++)
-		target_link_libraries(ArmaToJSON PRIVATE ws2_32) #needed for BOOST Asio
-
+		target_link_options(ArmaToJSON PUBLIC -static -static-libgcc -static-libstdc++)
 	else()
 		target_link_options(ArmaToJSON PUBLIC -static-libgcc -static-libstdc++)
 	endif()
@@ -105,10 +98,18 @@ add_custom_command(
     COMMENT "Moving lib to Test Folder"
 )
 
-if(MINGW)
+if(DEFINED ENV{ARMA3} AND NOT "$ENV{ARMA3}" STREQUAL "")
 add_custom_command(
 	TARGET ArmaToJSON
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:ArmaToJSON> $ENV{ARMA3}
     COMMENT "Moving lib to Arma 3 folder")
+endif()
+
+if(DEFINED ENV{btc_toolchain} AND NOT "$ENV{btc_toolchain}" STREQUAL "")
+add_custom_command(
+	TARGET ArmaToJSON
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:ArmaToJSON> $ENV{btc_toolchain}/json/
+    COMMENT "Moving lib to btc_toolchain folder")
 endif()

@@ -15,10 +15,7 @@
             "toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
             "cacheVariables": {
                 "CMAKE_CXX_COMPILER": "${env:CXX}",
-                "BUILD_STATIC": {
-                    "type": "BOOL",
-                    "value": true
-                },
+                "BUILD_STATIC": true,
                 "PRESET_NAME": "${presetName}"
             },
             "architecture": {
@@ -46,22 +43,43 @@
     ],
     "buildPresets": [
         {
-            "name": "ninja-vcpkg-debug",
+            "name": "ninja-vcpkg-debug-dynamic",
             "configurePreset": "ninja-multi-vcpkg",
             "displayName": "Build Linux (Debug)",
             "description": "Build with Ninja/vcpkg (Debug)",
             "configuration": "Debug"
         },
         {
-            "name": "ninja-vcpkg-release",
+            "name": "ninja-vcpkg-release-dynamic",
             "configurePreset": "ninja-multi-vcpkg",
             "displayName": "Build Linux (Release)",
             "description": "Build with Ninja/vcpkg (Release)",
             "configuration": "Release"
         },
         {
-            "name": "ninja-vcpkg-releasedebinfo",
+            "name": "ninja-vcpkg-releasedebinfo-dynamic",
             "configurePreset": "ninja-multi-vcpkg",
+            "displayName": "Build Linux (RelWithDebInfo)",
+            "description": "Build with Ninja/vcpkg (RelWithDebInfo)",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "ninja-vcpkg-debug-static",
+            "configurePreset": "ninja-multi-vcpkg-static",
+            "displayName": "Build Linux (Debug)",
+            "description": "Build with Ninja/vcpkg (Debug)",
+            "configuration": "Debug"
+        },
+        {
+            "name": "ninja-vcpkg-release-static",
+            "configurePreset": "ninja-multi-vcpkg-static",
+            "displayName": "Build Linux (Release)",
+            "description": "Build with Ninja/vcpkg (Release)",
+            "configuration": "Release"
+        },
+        {
+            "name": "ninja-vcpkg-releasedebinfo-static",
+            "configurePreset": "ninja-multi-vcpkg-static",
             "displayName": "Build Linux (RelWithDebInfo)",
             "description": "Build with Ninja/vcpkg (RelWithDebInfo)",
             "configuration": "RelWithDebInfo"
