@@ -1,7 +1,6 @@
 #include "dllmain.hpp"
 #include "logger.hpp"
 #include "manager.hpp"
-#include "packet.hpp"
 
 #if defined(_MSC_VER) && !defined(__GNUC__)
 // Pure MSVC
@@ -36,6 +35,6 @@ DESTRUCTOR(end) {
 } */
 
 void RVExtension(char *const output, const size_t outputMaxSize, const char *const data) {
-	LOG_INFO("RVExtension called with {} out of {} bytes of data", std::string_view{data}.size(), outputMaxSize);
-	ArmaToJSON::packet_manager::managePacketIO(output, outputMaxSize - 1, std::string_view{data});
+	LOG_DEBUG("RVExtension called with {} out of {} bytes of data", std::string_view{data}.size(), outputMaxSize);
+	ArmaToJSON::manager::manageIO(output, outputMaxSize - 1, std::string_view{data});
 }

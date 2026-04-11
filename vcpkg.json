@@ -6,7 +6,6 @@
     "boost-date-time",
     "fmt",
     "nlohmann-json",
-    "spdlog",
-    "boost-asio"
+    "spdlog"
   ]
 }

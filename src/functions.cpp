@@ -1,122 +1,82 @@
 #include "logger.hpp"
 #include "manager.hpp"
 #include <boost/date_time.hpp>
+#include <fmt/chrono.h>
+#include <fmt/format.h>
 #include <functions.hpp>
+#include <nlohmann/json.hpp>
+#include <string>
+#include <utility>
+
+#define MAX_SIZE 20480
 
 using JSON = nlohmann::json;
 namespace fs = std::filesystem;
 namespace ArmaToJSON {
-std::unordered_map<std::string, std::string> packetDataStorage{};
-const std::unordered_map<std::string, PacketFunction> packetFunctions = {
-	{"copyFile", file::copyFile},		  {"createFile", file::createFile},
-	{"retrieveList", file::retrieveList}, {"getFile", file::getFile},
-	{"deleteFile", file::deleteFile},	  {"renameFile", file::renameFile}};
-
-std::string getCurrentDateTime() {
-
-	std::ostringstream ss;
-	boost::posix_time::ptime time{boost::posix_time::second_clock::local_time()};
-
-	auto time_facet = boost::posix_time::time_facet{"%d-%m-%Y %H-%M"};
-	ss.imbue(std::locale(ss.getloc(), &time_facet));
-	ss << time;
-
-	LOG_DEBUG("retrieving time {}", ss.str());
-
-	return ss.str();
-}
 
 namespace storage {
-void storePacketData(Packet &outPacket, const size_t outputMaxSize) {
-	const std::string dump{outPacket.dump()};
-	auto storageID{Packet::getNewID()};
-	packetDataStorage.emplace(storageID, dump);
-	outPacket.clear(); // data has been stored, we don't need anything else fancy
-	outPacket["storageID"] = storageID;
-
-	size_t totalChunks{(dump.size() + outputMaxSize - 1) / outputMaxSize};
-	outPacket["chunks"] = totalChunks;
+size_t ID = 0;
+const std::string createNewID() {
+	return fmt::format("{}-{}", ID++, std::chrono::system_clock::now());
 }
 
-void getChunk(char *const output, const Packet &inPacket, const size_t outputMaxSize) {
-	if (packetDataStorage.empty())
+JSON storeData(const JSON &json, const size_t outputMaxSize) {
+	const std::string dump{json.dump()};
+	const std::string ID{createNewID()};
+	const size_t size{(dump.size() + outputMaxSize - 1) / outputMaxSize};
+	std::map<size_t, std::string> chunks;
+
+	for (size_t i = 0; i < size; ++i) {
+		chunks.emplace(i, dump.substr(i * outputMaxSize, outputMaxSize));
+	}
+	manager::chunkStorage.emplace(std::make_pair(ID, chunks));
+
+	LOG_WARN("json is too big, storing json at {}", ID);
+	return {{"ID", ID}, {"size", size}};
+}
+
+void getChunk(char *const output, const size_t outputMaxSize, const JSON &json) {
+	if (manager::chunkStorage.empty())
 		throw std::runtime_error{"storage is empty"};
 
-	auto id{inPacket.value<std::string>("storageID", "")};
-	auto requestChunk{inPacket.value<size_t>("requestChunk", 0)};
-	auto chunks{inPacket.value<size_t>("chunks", 0)};
+	std::string id{json.at("ID").get<std::string>()};
+	size_t requestChunk{json.at("chunk").get<size_t>()};
 
-	if (!packetDataStorage.contains(id))
+	if (!manager::chunkStorage.contains(id))
 		throw std::runtime_error(
 			fmt::format("ID: {} has not been found", id.empty() ? "EMPTY" : id));
 
-	if (chunks == 0)
-		throw std::runtime_error("chunks property is 0");
+	std::string chunk{manager::chunkStorage.at(id).at(requestChunk)};
+	manager::chunkStorage.at(id).erase(requestChunk);
 
-	if (requestChunk >= chunks)
-		throw std::runtime_error(fmt::format("requestChunks: {} is above the maximum limit of {}",
-											 requestChunk, chunks));
-
-	std::string chunk{packetDataStorage.at(id).substr(requestChunk * outputMaxSize, outputMaxSize)};
-	if (requestChunk == (chunks - 1)) //if last chunk, remove element to avoid memory leak
-		packetDataStorage.erase(id);
-
-	packet_manager::writeToOutput(output, chunk, outputMaxSize);
+	LOG_INFO("getting chunk {} at {}", id, requestChunk);
+	manager::writeToOutput(output, outputMaxSize, chunk);
 }
-
-/* void chunkPacket(Packet &outPacket, const size_t outputMaxSize) {
-	if (outPacket["function"] == "getChunk") {
-		throw std::runtime_error(fmt::format("function of packet to be chunked cannot be "
-											 "getChunk, size of chunk {}, outputMaxSize {}",
-											 outPacket.size(), outputMaxSize));
-	}
-	std::map<size_t, std::string> chunks{};
-	const std::string outPacketDump{outPacket.dump()};
-	size_t totalChunks{(outPacketDump.size() + outputMaxSize - 1) / outputMaxSize};
-
-	for (size_t i = 0; i < totalChunks; i++) {
-		std::string chunk{outPacketDump.substr(i * outputMaxSize, outputMaxSize)};
-		LOG_DEBUG("i * outputMaxSize: {} size {}, outputMaxSize: {}", i * outputMaxSize,
-				  chunk.size(), outputMaxSize);
-		assert(chunk.size() <= outputMaxSize);
-		chunks.emplace(i, std::move(chunk));
-	}
-
-	auto storageID{Packet::getNewID()};
-	outPacket.clear(); // whole json has been chunked, we don't need anything fancy
-	outPacket["returnCode"] = 206;
-	outPacket["storageID"] = storageID;
-	outPacket["chunks"] = chunks.size();
-
-	chunksStorage.emplace(storageID, std::move(chunks));
-} */
 
 } // namespace storage
 
 namespace file {
-void copyFile(const Packet &inPacket, Packet *const outPacket) {
-	if (!outPacket)
-		throw std::runtime_error{"outPacket is null"};
-
-	const fs::path path{inPacket.value<fs::path>("path", "")};
-	const fs::path newPath{inPacket.value<fs::path>("newPath", "")};
+JSON copyFile(const JSON &json) {
+	const fs::path path{json.at("path").get<fs::path>()};
+	const fs::path newPath{json.at("newPath").get<fs::path>()};
 
 	if (path.empty())
 		throw std::runtime_error{"path is empty"};
 	if (newPath.empty())
-		return;
+		throw std::runtime_error{"newPath is empty"};
+
 	if (auto filename{path.filename()}; filename.empty() || filename.extension() != ".json")
 		throw std::runtime_error{"path is not a valid file"};
 
 	bool hasCopied = fs::copy_file(path, newPath, fs::copy_options::overwrite_existing);
-	LOG_DEBUG("copying file {}", path.string());
+
+	assert(hasCopied);
+	LOG_INFO("copying file {}", path.string());
+	return {{"hasCopied", hasCopied}};
 }
 
-void createFile(const Packet &inPacket, Packet *const outPacket) {
-	if (!outPacket)
-		throw std::runtime_error{"outPacket is null"};
-
-	const fs::path path{inPacket.value<fs::path>("path", "")};
+JSON createFile(const JSON &json) {
+	const fs::path path{json.at("path").get<fs::path>()};
 	if (path.empty())
 		throw std::runtime_error{"path is empty"};
 
@@ -132,16 +92,15 @@ void createFile(const Packet &inPacket, Packet *const outPacket) {
 	if (!file)
 		throw std::runtime_error("failed to open file: " + path.string());
 
-	file << inPacket;
+	file << json.value("data", JSON::object());
 
-	LOG_DEBUG("creating file {}", path.string());
+	LOG_INFO("creating file {}", path.string());
+	return JSON::object();
 }
 
-void retrieveList(const Packet &inPacket, Packet *const outPacket) {
-	if (!outPacket)
-		throw std::runtime_error{"outPacket is null"};
+JSON retrieveList(const JSON &json) {
+	const fs::path path{json.at("path").get<fs::path>()};
 
-	const fs::path path{inPacket.value<fs::path>("path", "")};
 	if (path.empty())
 		throw std::runtime_error{"path is empty"};
 
@@ -169,15 +128,14 @@ void retrieveList(const Packet &inPacket, Packet *const outPacket) {
 	for (const auto &path : paths) {
 		LOG_DEBUG("retrieveList: path {}", path);
 	}
+#else
+	LOG_INFO("retrieving list of files at {}", path.string());
 #endif
-	outPacket->setData(paths);
+	return {{"paths", paths}};
 }
 
-void getFile(const Packet &inPacket, Packet *const outPacket) {
-	if (!outPacket)
-		throw std::runtime_error{"outPacket is null"};
-
-	const fs::path path{inPacket.value<fs::path>("path", "")};
+JSON getFile(const JSON &json) {
+	const fs::path path{json.at("path").get<fs::path>()};
 
 	if (path.empty())
 		throw std::runtime_error{"path is empty"};
@@ -188,42 +146,41 @@ void getFile(const Packet &inPacket, Packet *const outPacket) {
 	if (!file)
 		throw std::runtime_error("failed to open file: " + path.string());
 
-	JSON j;
+	JSON j{};
 	file >> j;
-	outPacket->setData(j);
+
+	LOG_INFO("retrieving file {}", path.string());
+	return j;
 }
 
-void deleteFile(const Packet &inPacket, Packet *const outPacket) {
-	if (!outPacket)
-		throw std::runtime_error{"outPacket is null"};
-
-	const fs::path path{inPacket.value<fs::path>("path", "")};
+JSON deleteFile(const JSON &json) {
+	const fs::path path{json.at("path").get<fs::path>()};
 
 	if (path.empty())
 		throw std::runtime_error{"path is empty"};
 	if (auto filename{path.filename()}; filename.empty() || filename.extension() != ".json")
 		throw std::runtime_error{"path is not a valid file"};
 
-	fs::remove(path);
-	LOG_DEBUG("deleting {}", path.string());
+	bool hasRemoved = fs::remove(path);
+
+	LOG_INFO("deleting {}", path.string());
+	return {{"hasRemoved", hasRemoved}};
 }
 
-void renameFile(const Packet &inPacket, Packet *const outPacket) {
-	if (!outPacket)
-		throw std::runtime_error{"outPacket is null"};
-
-	const fs::path path{inPacket.value<fs::path>("path", "")};
-	const fs::path newPath{inPacket.value<fs::path>("newPath", "")};
+JSON renameFile(const JSON &json) {
+	const fs::path path{json.at("path").get<fs::path>()};
+	const fs::path newPath{json.at("newPath").get<fs::path>()};
 
 	if (path.empty())
 		throw std::runtime_error{"path is empty"};
 	if (newPath.empty())
-		return;
+		throw std::runtime_error{"newPath is empty"};
 	if (auto filename{path.filename()}; filename.empty() || filename.extension() != ".json")
 		throw std::runtime_error{"path is not a valid file"};
 
 	fs::rename(path, newPath);
-	LOG_DEBUG("renaming {} to {}", path.string(), newPath.string());
+	LOG_INFO("renaming {} to {}", path.string(), newPath.string());
+	return JSON::object();
 }
 } // namespace file
 } // namespace ArmaToJSON

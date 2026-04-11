@@ -12,8 +12,6 @@ add_library (ArmaToJSON SHARED)
 target_sources (ArmaToJSON PRIVATE 
 	"include/dllmain.hpp"
 	"src/dllmain.cpp"
-	"include/packet.hpp"
-	"src/packet.cpp"
 	"include/manager.hpp"
 	"src/manager.cpp"
 	"include/functions.hpp"
@@ -76,9 +74,6 @@ target_compile_features(ArmaToJSON PUBLIC cxx_std_20)
 
 find_package(Boost REQUIRED COMPONENTS date_time)
 target_link_libraries(ArmaToJSON PUBLIC Boost::date_time)
-
-find_package(Boost REQUIRED COMPONENTS asio)
-target_link_libraries(ArmaToJSON PRIVATE Boost::asio)
 
 find_package(nlohmann_json CONFIG REQUIRED)
 target_link_libraries(ArmaToJSON PUBLIC nlohmann_json::nlohmann_json)

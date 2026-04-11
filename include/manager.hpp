@@ -1,35 +1,34 @@
 #pragma once
 
-#include "packet.hpp"
-
 /// @namespace ArmaToJSON
 /// @brief ArmaToJSON library namespace.
+#include <nlohmann/json_fwd.hpp>
+#include <string_view>
+#include <map>
+#include <unordered_map>
+
 namespace ArmaToJSON {
 /// @namespace packet
 /// @brief Packet handling utilities for the ArmaToJSON library.
-namespace packet_manager {
+namespace manager {
+
+/// @brief Storage for packets string chunks keyed by identifier.
+extern std::unordered_map<std::string, std::map<size_t, std::string>> chunkStorage;
+/// @brief Function pointer type for packet operations.
+using Function = nlohmann::json (*)(const nlohmann::json &json);
+/// @brief Map of function names to their implementations.
+extern const std::unordered_map<std::string, Function> packetFunctions;
 
 /// @brief Manages a packet and writes to output.
 /// @param output The buffer to write to.
-/// @param outputSize The maximum size for the output packet.
-/// @param inPacket The input packet to manage.
-void managePacketIO(char *const output, const size_t outputSize, const Packet &inPacket);
+/// @param outputMaxSize The maximum size for the output packet.
+/// @param data The input data to manage.
+void manageIO(char *const output, const size_t outputMaxSize, const std::string_view data);
 
-/// @brief Manages function calls on a packet.
-/// @param inPacket The packet containing function name and parameters.
-/// @param outPacket The output packet for results.
-void managePacketFunction(const Packet &inPacket, Packet &outPacket, const size_t outputMaxSize);
-
-/// @brief Writes to dest from src outputSize chars.
-/// @param output Char* destination.
-/// @param outPacket Src source.
-/// @param outputMaxSize Amount of chars dest can hold.
-void writeToOutput(char *const output, Packet& outPacket, const size_t outputMaxSize);
-
-/// @brief Writes to dest from src outputSize chars.
-/// @param output Char* destination.
-/// @param input Src source.
-/// @param outputMaxSize Amount of chars dest can hold.
-void writeToOutput(char *const output, const std::string& input, const size_t outputMaxSize);
-} // namespace packet_manager
+/// @brief Writes from src to dest, maximum outputSize chars.
+/// @param output destination.
+/// @param outputMaxSize Amount of chars output can hold.
+/// @param json The incoming json.
+void writeToOutput(char *const output, const size_t outputMaxSize, const std::string& input);
+} // namespace manager
 } // namespace ArmaToJSON
