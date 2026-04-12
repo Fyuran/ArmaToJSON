@@ -6,6 +6,7 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <ranges>
+#include <stdexcept>
 
 using JSON = nlohmann::json;
 
@@ -18,9 +19,18 @@ const std::unordered_map<std::string, Function> packetFunctions = {
 	{"retrieveList", file::retrieveList}, {"getFile", file::getFile},
 	{"deleteFile", file::deleteFile},	  {"renameFile", file::renameFile}};
 
+std::string_view strip_quotes(const std::string_view s) {
+    if (s.size() >= 2 && s.front() == '"' && s.back() == '"')
+        return s.substr(1, s.size() - 2);
+    return s;
+}
+
 void manageIO(char *const output, const size_t outputMaxSize, const std::string_view data) {
-	JSON json(JSON::parse(data));
-	assert(json.is_object());
+	JSON json(JSON::parse(strip_quotes(data)));
+	LOG_DEBUG("parsed JSON is {}", json.dump());
+	if(!json.is_object())
+		throw std::runtime_error("parsed json is not a JSON object");
+
 	try {
 		if (!json.contains("function"))
 			throw std::runtime_error{"\"function\" key not found"};
@@ -34,7 +44,7 @@ void manageIO(char *const output, const size_t outputMaxSize, const std::string_
 		}
 		else {
 			throw std::runtime_error{
-				fmt::format("fnc: {} not implemented, available functions are : {}", fncName.empty() ? "EMPTY" : fncName, packetFunctions | std::views::keys)};
+				fmt::format("function: {} not implemented, available functions are : {}", fncName.empty() ? "EMPTY" : fncName, packetFunctions | std::views::keys)};
 		}
 
 		if(json.dump().size() > outputMaxSize) {

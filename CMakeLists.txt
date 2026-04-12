@@ -23,7 +23,7 @@ target_sources (ArmaToJSON PRIVATE
 set_target_properties(ArmaToJSON PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 if(BUILD_STATIC)
 	if(MINGW)
-		target_link_options(ArmaToJSON PUBLIC -static -static-libgcc -static-libstdc++)
+		target_link_options(ArmaToJSON PUBLIC -Wl,-allow-multiple-definition -static -static-libgcc -static-libstdc++)
 	else()
 		target_link_options(ArmaToJSON PUBLIC -static-libgcc -static-libstdc++)
 	endif()
@@ -98,7 +98,7 @@ add_custom_command(
     COMMENT "Moving lib to Test Folder"
 )
 
-if(DEFINED ENV{ARMA3} AND NOT "$ENV{ARMA3}" STREQUAL "")
+if(DEFINED ENV{ARMA3} AND NOT "$ENV{ARMA3}" STREQUAL "" AND $<$<CONFIG:Debug>:TRUE,FALSE>)
 add_custom_command(
 	TARGET ArmaToJSON
     POST_BUILD

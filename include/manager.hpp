@@ -19,6 +19,8 @@ using Function = nlohmann::json (*)(const nlohmann::json &json);
 /// @brief Map of function names to their implementations.
 extern const std::unordered_map<std::string, Function> packetFunctions;
 
+std::string_view strip_quotes(const std::string_view s);
+
 /// @brief Manages a packet and writes to output.
 /// @param output The buffer to write to.
 /// @param outputMaxSize The maximum size for the output packet.
